@@ -26,6 +26,32 @@ scripts/
   verify_ids.sh      # Cross-document ID consistency
 ```
 
+## Installation
+
+The harness ships several files. Copying treatment differs by category:
+
+| File / Path | Copy treatment | Reason |
+| :--- | :--- | :--- |
+| `AGENTS.md`, `CLAUDE.md` | Overwrite | Governance entry points; single source of truth |
+| `PRD.md`, `DESIGN.md`, `TASKS.md`, `TEST_REPORT.md` | Overwrite | Project document templates; Brainstorm phase expects them blank |
+| `PROBLEM_SOLVING.md` | Overwrite | Debugging method reference |
+| `scripts/verify_docs.sh`, `scripts/verify_ids.sh` | Overwrite | Verification chain |
+| `.gitignore` | **Manual merge** | Target project may already have language-specific rules |
+| `README.md` | **Skip** | Target project keeps its own README |
+
+For `.gitignore`, append the snippet below to the target project's existing `.gitignore`, or copy directly if the target has none:
+
+````text
+# Logs and runtime artifacts
+*.log
+logs/
+
+# Local-only agent settings (per-user overrides)
+.claude/settings.local.json
+````
+
+Choose the language version (repository root for Chinese, `EN/` for English) and copy the listed files into your project root.
+
 ## Usage
 
 1. Copy either the repository-root files (Chinese) or the contents of `EN/` (English) into your new project root.
@@ -59,4 +85,4 @@ This harness fixes both by making one source of truth per concern (requirements 
 
 ## 中文摘要
 
-本仓库是面向 code agent 的工程治理模板。中文版位于仓库根，英文版位于 `EN/`。拷贝任一版到新项目根目录即可使用：从 Brainstorm 阶段起步，agent 收齐 5 项必收信息后一次性生成 4 份项目文档，进入开发阶段。完整规范、ID 体系、质量 Gate 见 `AGENTS.md`；调试方法见 `PROBLEM_SOLVING.md`。交付前运行 `scripts/verify_docs.sh` 完成三项校验。
+本仓库是面向 code agent 的工程治理模板。中文版位于仓库根，英文版位于 `EN/`。拷贝任一版到新项目根目录时，治理文件（AGENTS / CLAUDE / 4 份项目文档 / PROBLEM_SOLVING / scripts）直接覆盖；`.gitignore` 需手动合并（见 Installation 节片段），`README.md` 跳过不覆盖。从 Brainstorm 阶段起步，agent 收齐 5 项必收信息后一次性生成 4 份项目文档，进入开发阶段。完整规范、ID 体系、质量 Gate 见 `AGENTS.md`；调试方法见 `PROBLEM_SOLVING.md`。交付前运行 `scripts/verify_docs.sh` 完成三项校验。
