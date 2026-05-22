@@ -1,0 +1,15 @@
+# Logs and runtime artifacts
+*.log
+logs/
+
+# Local-only agent settings (per-user overrides)
+.claude/settings.local.json
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

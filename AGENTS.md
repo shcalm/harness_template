@@ -1,100 +1,179 @@
 # Agent 工程治理规范
 
-目标：让 Codex 在长任务和多次续会中稳定恢复上下文、执行任务、留下可复验证据。
+<!-- AGENTS-META
+role: code agent governance context
+version: 1.0
+required_sections: 文件契约, 文档生命周期, 核心原则, 统一 ID, 工作模式, 质量 Gate, 任务与日志, 文档更新时机, 问题分析与解决, 模板校验
+-->
+
+目标：让 code agent 在长任务和多次续会中稳定恢复上下文、执行任务、留下可复验证据。
 
 ## 0. 文件契约
 
-* 每个项目文档顶部都应保留 `DOC-CONTRACT` 注释块。
-* `DOC-CONTRACT` 是该文件的永久维护约束，编辑该文件前先读取。
-* 进入 Active Project Mode 后，正文可以替换模板示例和占位符，但 `DOC-CONTRACT` 保留。
-* `scripts/verify_docs.sh` 检查每个项目文档是否存在 `DOC-CONTRACT`。
+| 文件 | 角色 | DOC-CONTRACT |
+| :--- | :--- | :--- |
+| `AGENTS.md` / `CLAUDE.md` | 治理上下文 | 无 |
+| `PROBLEM_SOLVING.md` | 调试流程参考 | 无 |
+| `PRD.md` / `DESIGN.md` / `TASKS.md` / `TEST_REPORT.md` | 项目事实源 | 必须，编辑前先读 |
+
+开发阶段后，正文中模板示例段与未填占位行已被覆盖或删除，`DOC-CONTRACT` 保留。
 
 ## 1. 文档生命周期
 
-本套文件拷贝进新项目时：
-* `AGENTS.md`：长期治理规范，保留并持续约束 Agent。
-* `PRD.md`、`DESIGN.md`、`TASKS.md`、`TEST_REPORT.md`：种子模板，第一轮项目沟通后由 Agent 填充/替换为真实项目内容。
-* 判断模式：大量 `[占位符]`、示例行、示例 `REQ-001/AC-001` = Seed Template Mode；出现真实项目名、真实需求、真实任务、真实验证 = Active Project Mode。
-* Seed Template Mode 结束条件：`PRD` 已有真实项目名与至少一条 `REQ/AC`，`DESIGN` 已有环境与恢复步骤，`TASKS` 已有当前焦点任务，`TEST_REPORT` 已有测试矩阵，且 `init.sh/progress.md` 已创建。
-* 进入 Active Project Mode 后，上述四份文档就是项目事实源；后续只做增量更新，保留历史事实和证据。
+项目从 **Brainstorm 阶段** 起步，经一次 **生成动作** 进入 **开发阶段**，此后不再切换。
+
+阶段判定（O(1)，读 `PRD.md` §1 第一格）：
+
+| `PRD.md` §1「项目名称」 | 阶段 |
+| :--- | :--- |
+| `[项目名称]`（占位） | Brainstorm |
+| 真实项目名 | 开发 |
 
 ## 2. 核心原则
 
-* 仓库文档是事实源：`PRD`=需求/验收，`DESIGN`=设计/恢复，`TASKS`=当前状态，`TEST_REPORT`=质量证据。
-* 证据先于结论：判断、修复、完成声明必须有命令、日志、测试、代码引用或人工观察记录。
-* 全路径验证高于局部正确：完成任务必须覆盖对应 `AC-ID`。
-* 小步、可回滚、可审计：最小改动；关键决策记录替代方案、原因、代价。
-* 降低接力成本：每次结束都留下当前焦点、下一步动作、阻塞、证据路径。
+* `PRD`=需求/验收，`DESIGN`=设计/恢复，`TASKS`=当前状态，`TEST_REPORT`=质量证据。
+* 证据先于结论：命令、日志、测试、代码引用或人工观察。
+* 全路径验证高于局部正确：关闭任务必须覆盖对应 `AC-ID`。
+* 最小改动、可回滚、可审计；关键决策记录替代方案/原因/代价。
+* 每次结束留下当前焦点、下一步动作、阻塞、证据路径。
 
 ## 3. 统一 ID
 
-使用同一套 ID 串联文档：`REQ-001` 需求，`AC-001` 验收，`TASK-001` 任务，`TEST-001` 验证，`DEC-001` 决策，`BUG-001` 缺陷/阻塞，`Q-001` 待确认问题。
+| 归属 | ID 前缀 | 含义 |
+| :--- | :--- | :--- |
+| `PRD.md` | `REQ-NNN` | 需求 |
+| `PRD.md` | `AC-NNN` | 端到端验收 |
+| `PRD.md` | `FLOW-NNN` | 业务流程 |
+| `PRD.md` | `CON-NNN` | 约束/假设 |
+| `PRD.md` | `NOGOAL-NNN` | 非目标 |
+| `PRD.md` | `Q-NNN` | 待确认问题 |
+| `DESIGN.md` | `DEC-NNN` | 技术决策 |
+| `DESIGN.md` | `INV-NNN` | 不变量 |
+| `DESIGN.md` | `CONTRACT-NNN` | 接口契约 |
+| `DESIGN.md` | `OBS-NNN` | 可观测信号 |
+| `DESIGN.md` | `BUG-NNN` | 失败模式 |
+| `DESIGN.md` | `DEBT-NNN` | 技术债 |
+| `TASKS.md` | `TASK-NNN[.M]` | 任务（支持子级） |
+| `TEST_REPORT.md` | `TEST-NNN` | 测试 |
 
-引用规则：
-* `AC-ID` 关联 `REQ-ID`。
-* `TASK-ID` 关联 `REQ-ID/AC-ID`。
-* `TEST-ID` 关联 `TASK-ID/AC-ID`。
-* `Q-ID` 记录在 `PRD.md` 的 Open Questions，并在 `TASKS.md` 的阻塞区引用。
-* 关闭任务前，`TASKS.md` 与 `TEST_REPORT.md` 追溯到同一组 `AC-ID`。
+命名规约：
+
+* R1 前缀大写 + 三位编号：`PREFIX-NNN`。
+* R2 表头列名一律 `<PREFIX>-ID`；禁用驼峰变体。
+* R3 一概念一前缀（接口=`CONTRACT-*`，观测=`OBS-*`）。
+* R4 子级 ID 只限 `TASK-001.M`。
+* R5 新 ID 类型先入此表再使用。
+
+跨文档引用：
+
+* `AC` → `REQ`；`TASK` → `REQ` + `AC`；`TEST` → `TASK` + `AC`。
+* `Q-NNN` 在 `PRD.md` §7 定义；`TASKS.md` 阻塞区引用。
+* `BUG-NNN` 在 `DESIGN.md` §8 登记；`TASKS.md` 阻塞区与 `TEST_REPORT.md` 缺陷区引用同编号。
+* 关闭 `TASK` 前，`TASKS.md` 与 `TEST_REPORT.md` 追溯同一组 `AC-ID`。
 
 ## 4. 工作模式
 
-### Seed Template Mode
+### Brainstorm 阶段
 
-第一轮项目沟通后，Agent 自动完成初始化：
-* 填充 `PRD.md`：项目目标、非目标、流程、`REQ-ID`、`AC-ID`。
-* 填充 `DESIGN.md`：环境、依赖、构建、运行、架构、关键决策。
-* 填充 `TASKS.md`：第一个 `TASK-ID`、当前焦点、下一步动作。
-* 填充 `TEST_REPORT.md`：预期测试矩阵；未运行项记录为待验证。
-* 创建 `init.sh`：环境检查、依赖检查、最小健康检查/验证入口。
-* 创建 `progress.md`：当前目标、最近决策、下一步动作、风险。
+agent 不动项目文档；对话中收集 5 项必收信息：
 
-`init.sh` 创建条件：技术栈、依赖安装方式、最小验证入口已明确；条件不足时在 `TASKS.md` 记录 `Q-ID`。
+1. 业务目标与目标用户
+2. 核心业务流程（≥1 `FLOW`）
+3. ≥1 条 `REQ` + 对应 `AC`
+4. 技术栈与运行环境
+5. 最小运行/验证命令
 
-### Active Project Mode
+齐备后 agent 主动确认"是否生成项目文档？"；缺口写成 `Q-NNN`（仅对话，不入文件）。
+
+### 生成动作（一次性，不可重复）
+
+用户确认后，覆盖式重写 4 份项目文档。每份文档以其 `DOC-CONTRACT` 的 `required_sections` 为骨架，逐节填实。
+
+| 保留 | 覆盖 | 删除 |
+| :--- | :--- | :--- |
+| `DOC-CONTRACT` 注释块 | 占位行 → 真实内容 | 各文档「最小填写示例」段 |
+| 章节标题与编号 | 表头不变，表格行填真值 | 仅含 `[xxx]` 的整行 |
+| 表头列名 | PRD §1 项目名 → 真实名 | 用不到的示例 ID 行 |
+
+`init.sh` 在技术栈明确时一并创建，否则在 `TASKS.md` 记 `Q-NNN`。
+
+### 开发阶段
 
 每次会话开始：
-1. 读 `progress.md`、`TASKS.md`，恢复当前焦点和下一步动作。
-2. 读 `PRD.md`、`DESIGN.md`、`TEST_REPORT.md`，对齐目标、设计、证据。
-3. 按当前 `TASK-ID` 执行；新需求写 `PRD`，新决策写 `DESIGN`，新状态写 `TASKS`，新证据写 `TEST_REPORT`。
+
+1. 读 `TASKS.md`（含 §5 会话心智摘要）：恢复焦点、下一步、心智模型。
+2. 读 `PRD` / `DESIGN` / `TEST_REPORT`：对齐目标、设计、证据。
+3. 按当前 `TASK-NNN` 执行；新需求→`PRD`，新决策→`DESIGN`，新状态→`TASKS`，新证据→`TEST_REPORT`。
 
 ## 5. 质量 Gate
 
-Definition of Ready：
-* 有明确 `REQ-ID/AC-ID`。
-* 有可执行下一步动作。
-* 有预期验证方式。
+就绪条件 (DoR)：
+
+* 明确的 `REQ-ID/AC-ID`。
+* 可执行的下一步动作。
+* 预期验证方式。
 * 环境恢复步骤可用，或阻塞已记录。
 
-Definition of Done：
-* 改动保持最小范围。
-* 对应 `AC-ID` 已全路径验证，或失败原因已记录。
-* `TEST_REPORT.md` 有命令、退出码、日志/产物路径、环境、版本。
-* `TASKS.md` 已更新状态并保留下一步入口。
+完成条件 (DoD)：
+
+* 改动最小。
+* `AC-ID` 已全路径验证，或失败原因已记录。
+* `TEST_REPORT.md` 有命令、退出码、证据路径、环境、版本。
+* `TASKS.md` 状态更新并留下一步入口。
 * 剩余风险有 `BUG-ID` 或后续 `TASK-ID`。
 
 验证记录格式：`1.[Step]->Verify:[Test/Log]`
 
 ## 6. 任务与日志
 
-* 状态：`[ ]` 待处理，`[/]` 进行中，`[x]` 完成，`[!]` 阻塞。
-* 同一时间只展开一个当前焦点任务。
-* 长日志写 `.log` 文件，文档只写摘要和路径。
-* 完成主任务后折叠子任务，只保留主任务状态、结果摘要、验证引用。
-* 分类不确定时写入 `TASKS.md` Obstacles 并请求确认。
+### 6.1 状态词汇
+
+| 类别 | 用在 | 状态集 |
+| :--- | :--- | :--- |
+| 任务进度 | `TASKS.md` | `[ ]` 待处理 / `[/]` 进行中 / `[x]` 完成 / `[!]` 阻塞 |
+| 测试结论 | `TEST_REPORT.md` | 通过 / 失败 / 未执行 / 部分通过 |
+
+跨表一致性：
+
+* 测试 = `失败` → 关联任务标 `[!]`。
+* 测试 = `未执行` → 关联任务不可 `[x]`。
+* 任务 `[x]` 前提：该任务覆盖的所有 `AC-ID` 在 `TEST_REPORT.md` 结论全 = `通过`。
+
+### 6.2 日志与折叠
+
+* 同时只展开一个当前焦点任务。
+* 长日志写 `.log`；文档只写摘要 + 路径。
+* 主任务完成后折叠子任务为单行摘要。
+* 分类不确定 → 写入 `TASKS.md` 阻塞区并请求确认。
 
 ## 7. 文档更新时机
 
-文档更新基于工程状态变化：
-* 第一轮初始化后：填充四份项目文档，创建 `init.sh/progress.md`。
-* 需求或验收变化后：更新 `PRD.md`。
-* 技术决策、架构边界、失败模式变化后：更新 `DESIGN.md`。
-* 任务阶段、阻塞、下一步动作变化后：更新 `TASKS.md` 和 `progress.md`。
-* 运行测试或全路径验证后：更新 `TEST_REPORT.md`。
-* 会话结束或准备交接时：更新 `progress.md`，确保下一次可恢复。
+| 变化触发 | 更新位置 |
+| :--- | :--- |
+| 生成动作完成 | 4 份文档进入增量模式 |
+| 需求/验收变化 | `PRD.md` |
+| 决策/架构/失败模式 | `DESIGN.md` |
+| 任务/阻塞/下一步 | `TASKS.md` |
+| 测试结果 | `TEST_REPORT.md` |
+| 会话结束/交接 | `TASKS.md` §5 |
 
-任务未完成时，只更新当前状态、假设、证据和下一步动作；完成结论只在通过 DoD 后写入。
+测试层级与文档责任：
 
-## 8. 模板校验
+| 层级 | 时机 | 状态记录 | 证据归档 |
+| :--- | :--- | :--- | :--- |
+| 单元测试 | 开发期持续 | `TASKS.md` 子任务 `证据/输出` 列 | `TEST_REPORT.md` §4（交付时汇总） |
+| 集成/全路径 | 任务完成时 | `TEST_REPORT.md` §3、§5 | `TEST_REPORT.md` |
 
-交付前运行 `scripts/verify_docs.sh`，再进入测试、全路径验证和交接。
+## 8. 问题分析与解决
+
+遇到 BUG 或系统异常时，参考 `PROBLEM_SOLVING.md`（含完整启用条件、调试方法、退出标准）。单模块且原因明确的简单问题直接处理。
+
+## 9. 模板校验
+
+交付前运行 `scripts/verify_docs.sh`，覆盖三项检查：
+
+1. 章节存在性（按 `DOC-CONTRACT` / `AGENTS-META` 的 `required_sections`）。
+2. Harness 版本号（`AGENTS-META.version`）。
+3. 跨文档 ID 一致性（链式调用 `scripts/verify_ids.sh`；Brainstorm 阶段自动跳过）。
+
+三项全通过后再进入测试、全路径验证、交接。
