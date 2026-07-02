@@ -1,6 +1,6 @@
 # PROBLEM_SOLVING.md: Problem Analysis and Resolution Flow
 
-> This file constrains **debugging method** (thinking flow, decision criteria), not **document operations** (which file to update, which field to write).
+> This file constrains **debugging method** (thinking flow, decision criteria). Whether documents are updated, when they are updated, and whether they must be tied to a commit all follow `AGENTS.md` §7.
 > Document writes follow AGENTS.md §7; verification record format follows AGENTS.md §5; engagement conditions are defined by this file.
 
 ## When to Engage This Flow
@@ -21,6 +21,8 @@
 | Recurs after a fix | A previous "fix" did not actually address the root cause |
 | Unclear impact scope | Uncertain which modules will be affected by the change |
 | Assumptions outnumber evidence | The reasoning chain runs more than two steps with every step being a guess |
+
+Once the problem matches these complex-problem traits, first create or split a tracked `TASK` in `TASKS.md`, register a `BUG-ID` when needed, and complete the verification plan before repairing the code.
 
 ---
 
@@ -128,6 +130,8 @@ Write at least two options before choosing:
 
 Selection rule: prefer the minimal change that can validate the root cause; open a separate task for the full fix.
 
+Each option must also state the verification method, key logs/observation points, and the success criteria.
+
 ---
 
 ### Step 7: Implement and Verify
@@ -142,11 +146,22 @@ Selection rule: prefer the minimal change that can validate the root cause; open
 
 Verification record format follows AGENTS.md §5.
 
+Before this step begins, confirm that the corresponding `TASK/BUG` entry and verification plan have already been recorded.
+
+When the issue is a build error, syntax error, small localized fix, or other obvious narrow-scope error, successful verification at this step normally means commit directly without updating source-of-truth project documents.
+
 ---
 
 ### Step 8: Archive
 
-After the root cause is confirmed and the fix is verified, follow AGENTS.md §7 (Document Update Triggers) for writing back. This flow ends here.
+After the root cause is confirmed, close out with these rules:
+
+1. If the current environment supports real verification, finish verification first, then commit, and only then update documents per AGENTS.md §7.
+2. If the current environment cannot support real verification, documents may be updated after the code change is prepared, but the record must clearly state the "unverified / awaiting user verification" boundary and explicitly ask the user to verify. After verification passes and the code is committed, convert that record into final fact.
+3. Simple issues normally do not update source-of-truth project documents; the commit is the primary record.
+4. Complex issues update `TASKS.md` after verification passes, and archive every actually executed verification in `TEST_REPORT.md`.
+
+This flow ends here.
 
 ---
 

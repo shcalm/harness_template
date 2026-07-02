@@ -15,8 +15,11 @@ Goal: keep the code agent able to recover context, execute tasks, and leave repr
 | `AGENTS.md` / `CLAUDE.md` | Governance context | None |
 | `PROBLEM_SOLVING.md` | Debugging playbook | None |
 | `PRD.md` / `DESIGN.md` / `TASKS.md` / `TEST_REPORT.md` | Project source of truth | Required, read before editing |
+| `Notebook/*.md` | Project knowledge base and development experience archive | None |
 
 After the Development Phase begins, template examples and placeholder rows are overwritten or removed in the body, while `DOC-CONTRACT` remains.
+
+`Notebook/` stores reusable benchmark studies, issue investigations, device forensics, solution exploration, fix records, and operational experience. It is not the current source of truth. The authoritative state remains `PRD.md`, `DESIGN.md`, `TASKS.md`, `TEST_REPORT.md`, and the code. As the project evolves, interim judgments in `Notebook/` can become stale. Before using any Notebook conclusion, re-check it against current code, source-of-truth documents, and the latest verification evidence. Do not rely on `Notebook/` alone for implementation, review, or delivery decisions.
 
 ## 1. Document Lifecycle
 
@@ -35,7 +38,11 @@ Phase detection (O(1), read `PRD.md` §1 first cell):
 * Evidence precedes conclusion: commands, logs, tests, code references, or manual observation.
 * End-to-end validation outranks local correctness: closing a task requires covering the associated `AC-ID`.
 * Minimal change, reversible, auditable; key decisions record alternatives / reason / cost.
+* Design must include the verification design at the same time: every tracked main task states the verification goal, verification method, and observation signals before implementation starts.
+* Documents record only reproducible facts, not speculative "I just changed a few lines" intermediate states. Simple build issues and small localized fixes normally skip project document updates; the commit is the primary record for that class of change.
 * Every handoff leaves the current focus, next action, blockers, and evidence paths.
+* When content has lasting documentation value, add or update `Notebook/` entries: benchmark analysis, root-cause investigation, device forensics, major solution changes, reusable verification scripts/flows, and important operational conclusions.
+* `Notebook/` is background, leads, and experience input only. Before adopting any conclusion from it, re-verify against current source code, source-of-truth documents, build/test logs, or observed device behavior.
 
 ## 3. Unified ID Scheme
 
@@ -69,6 +76,7 @@ Cross-document References:
 * `AC` → `REQ`; `TASK` → `REQ` + `AC`; `TEST` → `TASK` + `AC`.
 * `Q-NNN` defined in `PRD.md` §7; referenced in `TASKS.md` blockers.
 * `BUG-NNN` registered in `DESIGN.md` §8; referenced by `TASKS.md` blockers and `TEST_REPORT.md` defects under the same number.
+* During design or planning, `TASKS.md` may reserve `TEST-ID`s as verification plans; create the formal record in `TEST_REPORT.md` only after the verification is actually executed.
 * Before closing a `TASK`, `TASKS.md` and `TEST_REPORT.md` trace back to the same set of `AC-ID`s.
 
 ## 4. Working Modes
@@ -97,13 +105,16 @@ On user confirmation, overwrite the four project documents. Each document uses i
 
 `init.sh` is created when the tech stack is clear; otherwise log a `Q-NNN` in `TASKS.md`.
 
+When the generation action finishes, `TASKS.md` must contain the first top-level task list that covers the current scope. Each `AC-ID` maps to at least one main `TASK`, with completion criteria and a verification plan written up front.
+
 ### Development Phase
 
 At the start of every session:
 
 1. Read `TASKS.md` (including §5 Session Mental Snapshot): recover focus, next action, mental model.
 2. Read `PRD` / `DESIGN` / `TEST_REPORT`: align on goals, design, evidence.
-3. Execute the current `TASK-NNN`; new requirements → `PRD`, new decisions → `DESIGN`, new state → `TASKS`, new evidence → `TEST_REPORT`.
+3. Read `Notebook/` as needed for background and historical evidence, but never skip validation against current code and source-of-truth documents.
+4. Execute the current `TASK-NNN`; new requirements → `PRD`, new decisions → `DESIGN`, new state → `TASKS`, new evidence → `TEST_REPORT`.
 
 ## 5. Quality Gates
 
@@ -111,7 +122,7 @@ Definition of Ready (DoR):
 
 * Explicit `REQ-ID / AC-ID`.
 * Executable next action.
-* Expected verification approach.
+* Expected verification approach; in the design phase, the task is not ready until the verification design is written down.
 * Environment recovery steps work, or the blocker is recorded.
 
 Definition of Done (DoD):
@@ -137,6 +148,7 @@ Cross-table consistency:
 
 * Verdict = `fail` → associated task status must be `[!]`.
 * Verdict = `not-run` → associated task status must not be `[x]`.
+* A `TEST-ID` reserved in `TASKS.md` means planned verification only; it does not mean the test has been executed.
 * Marking a task `[x]` requires every `AC-ID` it covers has all tests in `TEST_REPORT.md` with verdict = `pass`.
 
 ### 6.2 Logs and Collapsing
@@ -155,6 +167,7 @@ Cross-table consistency:
 | Decisions / architecture / failure modes | `DESIGN.md` |
 | Task / blockers / next action | `TASKS.md` |
 | Test results | `TEST_REPORT.md` |
+| Major research / root cause / device forensics / reusable experience | `Notebook/*.md` |
 | Session end / handoff | `TASKS.md` §5 |
 
 Test Tiers and Document Ownership:
@@ -164,9 +177,23 @@ Test Tiers and Document Ownership:
 | Unit tests | Throughout development | `TASKS.md` subtask `Evidence/Output` column | `TEST_REPORT.md` §4 (delivery-time summary) |
 | Integration / end-to-end | Once per completed task | `TEST_REPORT.md` §3 and §5 | `TEST_REPORT.md` |
 
+Separation of verification plan vs. verification evidence:
+
+1. During design/planning, use `TASKS.md` for task breakdown, expected verification method, reserved `TEST-ID`s, and key logs/observation points.
+2. During execution/delivery, only verifications that actually ran enter `TEST_REPORT.md` as formal `TEST-ID` records.
+3. If a verification item was planned during design but not run in this round, keep the plan in `TASKS.md`. Do not create a pure planning row in `TEST_REPORT.md` unless delivery audit explicitly needs a skipped-verification record.
+
+Document update decision rules:
+
+1. When the issue can be practically verified in the current environment (device, build, tests, runtime flow, and so on) and this round includes code changes, verify first, then submit the commit, and only then update project documents. Before verification and commit, do not write the code change into source-of-truth documents.
+2. When the issue cannot be practically verified in the current environment (for example, no device, build unavailable here, or missing external dependencies), documents may be updated after the code change is prepared, but the record must clearly state the "unverified / awaiting user verification" boundary, and the conversation must explicitly ask the user to verify. After verification passes and the code is committed, convert that record into final fact.
+3. Build issues, syntax fixes, single-file small fixes, and other obvious localized errors normally do not update `PRD.md`, `DESIGN.md`, `TASKS.md`, or `TEST_REPORT.md`; change the code and commit it directly. Add governance or knowledge documentation only when such issues reveal reusable process, systemic root cause, or long-term maintenance risk.
+4. Any document update that describes code behavior must be traceable to a concrete code version. After commit, bind the document to that commit (hash or a uniquely identifiable commit description). If an "awaiting verification" record is written first because the environment cannot verify yet, fill in that binding after verification passes and the code is committed.
+5. Once an issue matches the complex-problem criteria (cross-module, hard to reproduce, unclear root cause, unclear scope, and so on), create or split a tracked `TASK`, register a `BUG-ID` when needed, and complete the verification plan before continuing implementation or repair.
+
 ## 8. Problem Analysis and Resolution
 
-For BUGs or system anomalies, reference `PROBLEM_SOLVING.md` (full engagement conditions, debugging method, and exit criteria). Single-module problems with obvious cause are handled directly.
+For BUGs or system anomalies, reference `PROBLEM_SOLVING.md` (full engagement conditions, debugging method, and exit criteria). Single-module problems with obvious cause are handled directly. For build errors or localized small fixes, the default path is "change code -> verify -> commit" without extra source-of-truth document updates. If the issue matches the complex-problem criteria, upgrade it into a tracked task and design the verification plan before changing code.
 
 ## 9. Template Verification
 

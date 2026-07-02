@@ -10,9 +10,12 @@ rules:
   - every test record carries a TEST-ID
   - every TEST-ID links to an AC-ID and a TASK-ID
   - end-to-end verification has at least one full-path entry
+  - design-stage verification planning stays in TASKS.md; this file records only executed verification or delivery-audit entries explicitly marked not-run
 -->
 
 This file records reproducible quality evidence. Conclusions trace back to commands, logs, artifacts, or manual observation records.
+
+When a `TEST-ID` is first reserved during design in `TASKS.md`, it becomes a formal record here only after the verification is actually executed.
 
 ## 1. Delivery Verdict
 
@@ -37,6 +40,8 @@ This file records reproducible quality evidence. Conclusions trace back to comma
 
 ## 3. Test Matrix
 
+> This matrix records only verifications that actually ran, or verifications that a delivery audit explicitly needs to mark as not-run. Pure planning items do not belong here.
+
 | TEST-ID | Type | Linked TASK | Covered AC | Command / Operation | Exit Code | Evidence Path | Verdict |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | TEST-001 | `[unit / integration / full-path / manual]` | TASK-001 | AC-001 | `[Command or manual step]` | `[0 / non-zero / manual]` | `[logs/xxx.log / screenshot / artifact]` | `[pass / fail / not-run]` |
@@ -44,7 +49,7 @@ This file records reproducible quality evidence. Conclusions trace back to comma
 
 ## 4. Unit and Local Verification
 
-> This section is a delivery-time summary aggregated from the `Evidence / Output` column of each subtask in `TASKS.md`; it is not used for live tracking. During development, unit-test failure state lives in the `TASKS.md` subtask row.
+> This section is a delivery-time summary aggregated from the `Evidence / Output` column of each subtask in `TASKS.md`; it is not used for live tracking. During development, unit-test failure state and verification planning live in the `TASKS.md` subtask row.
 
 Format:
 
